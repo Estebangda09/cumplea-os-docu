@@ -488,8 +488,12 @@
 
     <script>
         // Configuración
-    const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBkO8UfbQoz90Z0os4Wult6mAz_GEzhEHpZuuyb7_-72fw0kowQ8-JYhCC0AzjyOtvlZGtgLj3Dvl/pub?gid=1759459475&single=true&output=csv';
-const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL);
+        const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBkO8UfbQoz90Z0os4Wult6mAz_GEzhEHpZuuyb7_-72fw0kowQ8-JYhCC0AzjyOtvlZGtgLj3Dvl/pub?gid=1759459475&single=true&output=csv';
+        
+        // Usamos el proxy para evitar problemas de CORS y compatibilidad
+        const PROXY_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL);
+
+        const SHEET_URL = PROXY_URL;
         
         const months = [
             'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -523,30 +527,26 @@ const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL)
         function parseDate(dateString) {
             if (!dateString) return null;
             
-            // Limpiar la fecha y convertir diferentes formatos
             const cleanDate = dateString.trim();
             let day, month, year;
             
-            // Formato DD/MM/YYYY o DD/M/YYYY
             if (cleanDate.includes('/')) {
                 const parts = cleanDate.split('/');
-                if (parts.length === 3) {
-                    day = parseInt(parts[0]);
-                    month = parseInt(parts[1]);
-                    year = parseInt(parts[2]);
+                if (parts.length >= 2) { // Acepta DD/MM o DD/MM/YYYY
+                    day = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10);
+                    year = parts.length === 3 ? parseInt(parts[2], 10) : new Date().getFullYear();
                 }
-            }
-            // Formato DD-MM o DD-M
-            else if (cleanDate.includes('-')) {
+            } else if (cleanDate.includes('-')) {
                 const parts = cleanDate.split('-');
-                if (parts.length === 2) {
-                    day = parseInt(parts[0]);
-                    month = parseInt(parts[1]);
-                    year = new Date().getFullYear(); // Año actual por defecto
+                 if (parts.length >= 2) {
+                    day = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10);
+                    year = new Date().getFullYear(); 
                 }
             }
             
-            if (day && month && day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+            if (!isNaN(day) && !isNaN(month) && day >= 1 && day <= 31 && month >= 1 && month <= 12) {
                 return { day, month, year };
             }
             
@@ -556,10 +556,11 @@ const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL)
         // Función para crear confetti
         function createConfetti() {
             const container = document.getElementById('confettiContainer');
+            if (!container) return;
             const colors = ['#C82330', '#6D6E71', '#ffe66d', '#95e1d3', '#ffa8a8', '#ff9ff3'];
             
             for (let i = 0; i < 15; i++) {
-                setTimeout(() => {
+                setTimeout(function() {
                     const confetti = document.createElement('div');
                     confetti.className = 'confetti';
                     confetti.style.left = Math.random() * 100 + '%';
@@ -568,57 +569,80 @@ const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL)
                     confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
                     container.appendChild(confetti);
                     
-                    setTimeout(() => confetti.remove(), 4000);
+                    setTimeout(function() { confetti.remove(); }, 4000);
                 }, i * 50);
             }
         }
 
-        // Función para cargar datos desde Google Sheets
-        async function loadBirthdayData() {
-            try {
-                console.log('Cargando datos desde Google Sheets...');
-                const response = await fetch(SHEET_URL);
-                const csvText = await response.text();
+        // --- FUNCIÓN MODIFICADA ---
+        // Función para cargar datos desde Google Sheets usando XMLHttpRequest
+        function loadBirthdayData() {
+            // Devolvemos una Promesa para mantener la estructura async/await en initialize()
+            return new Promise(function(resolve, reject) {
+                console.log('Cargando datos con XMLHttpRequest...');
+                const xhr = new XMLHttpRequest();
                 
-                console.log('Datos CSV recibidos:', csvText.substring(0, 200) + '...');
-                
-                // Parsear CSV
-                const lines = csvText.split('\n');
-                const data = [];
-                
-                // Saltar la primera línea (encabezados)
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (line) {
-                        const columns = line.split(',');
-                        if (columns.length >= 2) {
-                            const name = columns[0]?.replace(/"/g, '').trim();
-                            const birthDate = columns[1]?.replace(/"/g, '').trim();
+                xhr.open('GET', SHEET_URL, true); // true para modo asíncrono
+
+                xhr.onload = function() {
+                    if (xhr.status >= 200 && xhr.status < 400) {
+                        // Éxito en la solicitud
+                        try {
+                            const csvText = xhr.responseText;
+                            console.log('Datos CSV recibidos:', csvText.substring(0, 200) + '...');
                             
-                            if (name && birthDate) {
-                                const parsedDate = parseDate(birthDate);
-                                if (parsedDate) {
-                                    data.push({
-                                        name: name,
-                                        day: parsedDate.day,
-                                        month: parsedDate.month,
-                                        originalDate: birthDate
-                                    });
+                            // Parsear CSV
+                            const lines = csvText.split('\n');
+                            const data = [];
+                            
+                            // Saltar la primera línea (encabezados)
+                            for (let i = 1; i < lines.length; i++) {
+                                const line = lines[i].trim();
+                                if (line) {
+                                    const columns = line.split(',');
+                                    if (columns.length >= 2) {
+                                        const name = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
+                                        const birthDate = columns[1] ? columns[1].replace(/"/g, '').trim() : '';
+                                        
+                                        if (name && birthDate) {
+                                            const parsedDate = parseDate(birthDate);
+                                            if (parsedDate) {
+                                                data.push({
+                                                    name: name,
+                                                    day: parsedDate.day,
+                                                    month: parsedDate.month,
+                                                    originalDate: birthDate
+                                                });
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                            
+                            console.log('Datos procesados:', data.length, 'cumpleaños encontrados');
+                            birthdayData = data;
+                            resolve(data); // Resolvemos la promesa con los datos
+
+                        } catch (e) {
+                            console.error('Error parseando los datos CSV:', e);
+                            reject(e); // Rechazamos la promesa si hay error en el parseo
                         }
+                    } else {
+                        // Error en el servidor
+                        console.error('Error del servidor en la solicitud. Estado:', xhr.status);
+                        reject(new Error('Error del servidor: ' + xhr.statusText));
                     }
-                }
-                
-                console.log('Datos procesados:', data.length, 'cumpleaños encontrados');
-                birthdayData = data;
-                
-                return data;
-                
-            } catch (error) {
-                console.error('Error cargando datos:', error);
-                throw error;
-            }
+                };
+
+                // Error de red
+                xhr.onerror = function() {
+                    console.error('Error de red con XMLHttpRequest.');
+                    reject(new Error('Error de red'));
+                };
+
+                // Enviar la solicitud
+                xhr.send();
+            });
         }
 
         // Función para renderizar cumpleaños
@@ -628,16 +652,17 @@ const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL)
             const grid = document.getElementById('birthdayGrid');
             const loading = document.getElementById('loading');
             
-            // Actualizar nombre del mes
+            if (!grid || !loading) return;
+
             document.getElementById('currentMonth').textContent = currentMonth.name;
             
-            // Filtrar cumpleaños del mes actual
-            const monthBirthdays = birthdayData.filter(person => person.month === currentMonth.number);
+            const monthBirthdays = birthdayData.filter(function(person) {
+                return person.month === currentMonth.number;
+            });
             
-            // Ordenar por día
-            monthBirthdays.sort((a, b) => a.day - b.day);
+            monthBirthdays.sort(function(a, b) { return a.day - b.day; });
             
-            console.log(`Cumpleaños de ${currentMonth.name}:`, monthBirthdays);
+            console.log('Cumpleaños de ' + currentMonth.name + ':', monthBirthdays);
             
             if (monthBirthdays.length === 0) {
                 grid.innerHTML = '<div style="text-align: center; color: #C82330; font-size: 1.5rem; font-weight: 600;">No hay cumpleaños este mes 🎂</div>';
@@ -645,16 +670,14 @@ const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL)
                 return;
             }
             
-            // Limpiar grid
             grid.innerHTML = '';
             
             let hasToday = false;
             
-            monthBirthdays.forEach(person => {
+            monthBirthdays.forEach(function(person) {
                 const card = document.createElement('div');
                 card.className = 'birthday-card';
                 
-                // Verificar si es cumpleaños de hoy
                 const isToday = person.day === currentDate.day && person.month === currentDate.month;
                 if (isToday) {
                     card.classList.add('today');
@@ -669,49 +692,41 @@ const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL)
                 grid.appendChild(card);
             });
             
-            // Ocultar loading
             loading.style.display = 'none';
             
-            // Actualizar timestamp
             document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-AR');
             
-            // Si hay cumpleaños hoy, crear confetti
             if (hasToday) {
-                setTimeout(() => createConfetti(), 500);
-                // Repetir confetti cada 10 segundos
+                setTimeout(createConfetti, 500);
+                if (confettiInterval) clearInterval(confettiInterval);
                 confettiInterval = setInterval(createConfetti, 10000);
             }
         }
 
-        // Función principal de inicialización
+        // Función principal de inicialización (se mantiene async/await gracias a las Promesas)
         async function initialize() {
             try {
                 console.log('Inicializando aplicación...');
-                
-                // Cargar datos
                 await loadBirthdayData();
-                
-                // Renderizar cumpleaños
                 renderBirthdays();
-                
                 console.log('Aplicación inicializada correctamente');
-                
             } catch (error) {
                 console.error('Error inicializando:', error);
                 
-                document.getElementById('loading').innerHTML = `
-                    <div class="error">
-                        ⚠️ Error cargando datos de cumpleaños<br>
-                        <small>Verificando conexión con Google Sheets...</small>
-                    </div>
-                `;
-                
-                // Intentar cargar datos de respaldo
+                const loadingElement = document.getElementById('loading');
+                if (loadingElement) {
+                    loadingElement.innerHTML = `
+                        <div class="error">
+                            ⚠️ Error cargando datos de cumpleaños<br>
+                            <small>No se pudo conectar con Google Sheets. Mostrando datos de respaldo.</small>
+                        </div>
+                    `;
+                }
                 loadBackupData();
             }
         }
 
-        // Datos de respaldo para julio (basados en la imagen)
+        // Datos de respaldo en caso de fallo
         function loadBackupData() {
             console.log('Cargando datos de respaldo...');
             
@@ -726,12 +741,6 @@ const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL)
                 { name: 'Carolina Espinola', day: 27, month: 7 }
             ];
             
-            document.getElementById('loading').innerHTML = `
-                <div style="color: #C82330; text-align: center;">
-                    📋 Usando datos de respaldo - Conectando con Google Sheets...
-                </div>
-            `;
-            
             renderBirthdays();
         }
 
@@ -739,7 +748,7 @@ const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL)
         document.addEventListener('DOMContentLoaded', initialize);
         
         // Limpiar intervalos al cerrar
-        window.addEventListener('beforeunload', () => {
+        window.addEventListener('beforeunload', function() {
             if (confettiInterval) clearInterval(confettiInterval);
         });
     </script>
