@@ -13,18 +13,41 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* Previene el scroll en el body */
+            background-color: #000; /* Fondo para las barras laterales en pantallas ultra-anchas */
+        }
+
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 50%, #f1f3f4 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- NUEVO: CONTENEDOR PARA FORZAR 16:9 --- */
+        .aspect-ratio-box {
             position: relative;
+            width: 100%;
+            height: 100vh; /* Ocupa toda la altura de la ventana */
+            max-height: 56.25vw; /* 16:9 (9 / 16 * 100) */
+            max-width: 177.78vh; /* 16:9 (16 / 9 * 100) */
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 50%, #f1f3f4 100%);
+            overflow-y: auto; /* Permite el scroll dentro del contenedor */
             overflow-x: hidden;
         }
+        
+        .content-wrapper {
+             padding: 40px 20px;
+        }
+
+        /* --- FIN DE CAMBIOS PRINCIPALES --- */
 
         /* Logo Docuprint */
         .logo {
-            position: fixed;
+            position: absolute; /* Cambiado de fixed a absolute para que se quede dentro del contenedor */
             top: 20px;
             right: 20px;
             z-index: 1000;
@@ -41,7 +64,7 @@
 
         /* Animación de fondo con muñequitos */
         .background-animation {
-            position: fixed;
+            position: absolute; /* Cambiado de fixed a absolute */
             top: 0;
             left: 0;
             width: 100%;
@@ -132,11 +155,12 @@
 
         /* Efectos de partículas de fondo */
         .particle {
-            position: absolute;
+            position: absolute; /* Cambiado de fixed a absolute */
             background: rgba(200, 35, 48, 0.2);
             border-radius: 50%;
             pointer-events: none;
             animation: float 8s infinite ease-in-out;
+            z-index: 1; /* Asegurar que esté detrás del contenido */
         }
 
         .particle:nth-child(1) { width: 20px; height: 20px; top: 10%; left: 10%; animation-delay: 0s; }
@@ -297,7 +321,7 @@
 
         /* Confetti effect */
         .confetti-container {
-            position: fixed;
+            position: absolute; /* Cambiado de fixed a absolute */
             top: 0;
             left: 0;
             width: 100%;
@@ -378,115 +402,115 @@
                 padding: 20px;
             }
         }
+        
+        /* --- NUEVO: Media query para pantallas verticales --- */
+        @media (orientation: portrait) {
+            .aspect-ratio-box {
+                width: 100%;
+                height: 100%;
+                max-height: none;
+                max-width: none;
+            }
+        }
+
     </style>
 </head>
 <body>
-    <div class="logo">
-        <svg width="150" height="40" viewBox="0 0 150 40" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="35" height="35" rx="8" fill="#C82330"/>
-            <text x="17.5" y="25" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">D</text>
-            <text x="50" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="normal" fill="#6D6E71">docuprint</text>
-        </svg>
-    </div>
 
-    <!-- Animación de fondo -->
-    <div class="background-animation">
-        <!-- Muñequitos animados -->
-        <div class="character character-1">
-            <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-                <!-- Globo -->
-                <ellipse cx="25" cy="15" rx="8" ry="12" fill="#C82330"/>
-                <line x1="25" y1="27" x2="35" y2="45" stroke="#333" stroke-width="1"/>
-                <!-- Cuerpo -->
-                <circle cx="35" cy="50" r="8" fill="#333"/>
-                <rect x="30" y="45" width="10" height="15" fill="#333"/>
-                <!-- Brazos -->
-                <rect x="25" y="50" width="8" height="3" fill="#C82330"/>
-                <rect x="37" y="50" width="8" height="3" fill="#C82330"/>
-                <!-- Piernas -->
-                <rect x="32" y="60" width="3" height="8" fill="#333"/>
-                <rect x="38" y="60" width="3" height="8" fill="#333"/>
-                <!-- Cabeza -->
-                <circle cx="35" cy="40" r="6" fill="#6D6E71"/>
-            </svg>
-        </div>
-        
-        <div class="character character-2">
-            <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-                <!-- Globo -->
-                <ellipse cx="45" cy="12" rx="8" ry="12" fill="#6D6E71"/>
-                <line x1="45" y1="24" x2="35" y2="42" stroke="#333" stroke-width="1"/>
-                <!-- Vestido -->
-                <polygon points="35,45 25,60 45,60" fill="#C82330"/>
-                <!-- Brazos -->
-                <rect x="20" y="50" width="8" height="3" fill="#C82330"/>
-                <rect x="42" y="50" width="8" height="3" fill="#C82330"/>
-                <!-- Piernas -->
-                <rect x="28" y="60" width="3" height="8" fill="#333"/>
-                <rect x="39" y="60" width="3" height="8" fill="#333"/>
-                <!-- Cabeza -->
-                <circle cx="35" cy="40" r="6" fill="#6D6E71"/>
-                <!-- Cabello -->
-                <path d="M29,35 Q35,30 41,35" fill="#333"/>
-            </svg>
-        </div>
-        
-        <div class="character character-3">
-            <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-                <!-- Globo -->
-                <ellipse cx="55" cy="18" rx="8" ry="12" fill="#C82330"/>
-                <line x1="55" y1="30" x2="35" y2="45" stroke="#333" stroke-width="1"/>
-                <!-- Cuerpo -->
-                <circle cx="35" cy="50" r="8" fill="#333"/>
-                <rect x="30" y="45" width="10" height="15" fill="#333"/>
-                <!-- Brazos -->
-                <rect x="25" y="50" width="8" height="3" fill="#6D6E71"/>
-                <rect x="37" y="50" width="8" height="3" fill="#6D6E71"/>
-                <!-- Piernas -->
-                <rect x="32" y="60" width="3" height="8" fill="#333"/>
-                <rect x="38" y="60" width="3" height="8" fill="#333"/>
-                <!-- Cabeza -->
-                <circle cx="35" cy="40" r="6" fill="#6D6E71"/>
-            </svg>
-        </div>
+    <div class="aspect-ratio-box">
 
-        <!-- Globos flotantes -->
-        <div class="balloon balloon-1"></div>
-        <div class="balloon balloon-2"></div>
-        <div class="balloon balloon-3"></div>
-    </div>
+        <div class="content-wrapper">
 
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-
-    <div class="container">
-        <div class="header">
-            <h1 class="title">¡CUMPLEAÑOS DEL<br>MES!</h1>
-            <div class="month-container">
-                <div class="month-name" id="currentMonth">CARGANDO...</div>
+            <div class="logo">
+                <svg width="150" height="40" viewBox="0 0 150 40" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" y="0" width="35" height="35" rx="8" fill="#C82330"/>
+                    <text x="17.5" y="25" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">D</text>
+                    <text x="50" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="normal" fill="#6D6E71">docuprint</text>
+                </svg>
             </div>
-        </div>
 
-        <div id="loading" class="loading">
-            🎂 Cargando cumpleaños desde Google Sheets...
-        </div>
+            <div class="background-animation">
+                <div class="character character-1">
+                    <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="25" cy="15" rx="8" ry="12" fill="#C82330"/>
+                        <line x1="25" y1="27" x2="35" y2="45" stroke="#333" stroke-width="1"/>
+                        <circle cx="35" cy="50" r="8" fill="#333"/>
+                        <rect x="30" y="45" width="10" height="15" fill="#333"/>
+                        <rect x="25" y="50" width="8" height="3" fill="#C82330"/>
+                        <rect x="37" y="50" width="8" height="3" fill="#C82330"/>
+                        <rect x="32" y="60" width="3" height="8" fill="#333"/>
+                        <rect x="38" y="60" width="3" height="8" fill="#333"/>
+                        <circle cx="35" cy="40" r="6" fill="#6D6E71"/>
+                    </svg>
+                </div>
+                
+                <div class="character character-2">
+                    <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="45" cy="12" rx="8" ry="12" fill="#6D6E71"/>
+                        <line x1="45" y1="24" x2="35" y2="42" stroke="#333" stroke-width="1"/>
+                        <polygon points="35,45 25,60 45,60" fill="#C82330"/>
+                        <rect x="20" y="50" width="8" height="3" fill="#C82330"/>
+                        <rect x="42" y="50" width="8" height="3" fill="#C82330"/>
+                        <rect x="28" y="60" width="3" height="8" fill="#333"/>
+                        <rect x="39" y="60" width="3" height="8" fill="#333"/>
+                        <circle cx="35" cy="40" r="6" fill="#6D6E71"/>
+                        <path d="M29,35 Q35,30 41,35" fill="#333"/>
+                    </svg>
+                </div>
+                
+                <div class="character character-3">
+                    <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="55" cy="18" rx="8" ry="12" fill="#C82330"/>
+                        <line x1="55" y1="30" x2="35" y2="45" stroke="#333" stroke-width="1"/>
+                        <circle cx="35" cy="50" r="8" fill="#333"/>
+                        <rect x="30" y="45" width="10" height="15" fill="#333"/>
+                        <rect x="25" y="50" width="8" height="3" fill="#6D6E71"/>
+                        <rect x="37" y="50" width="8" height="3" fill="#6D6E71"/>
+                        <rect x="32" y="60" width="3" height="8" fill="#333"/>
+                        <rect x="38" y="60" width="3" height="8" fill="#333"/>
+                        <circle cx="35" cy="40" r="6" fill="#6D6E71"/>
+                    </svg>
+                </div>
 
-        <div class="birthday-grid" id="birthdayGrid">
-            <!-- Las tarjetas se generarán automáticamente -->
-        </div>
+                <div class="balloon balloon-1"></div>
+                <div class="balloon balloon-2"></div>
+                <div class="balloon balloon-3"></div>
+            </div>
 
-        <div class="update-info">
-            <h3>📊 Datos actualizados automáticamente</h3>
-            <p>Los cumpleaños se cargan directamente desde Google Sheets de Docuprint.<br>
-            Última actualización: <span id="lastUpdate">--</span></p>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+
+            <div class="container">
+                <div class="header">
+                    <h1 class="title">¡CUMPLEAÑOS DEL<br>MES!</h1>
+                    <div class="month-container">
+                        <div class="month-name" id="currentMonth">CARGANDO...</div>
+                    </div>
+                </div>
+
+                <div id="loading" class="loading">
+                    🎂 Cargando cumpleaños desde Google Sheets...
+                </div>
+
+                <div class="birthday-grid" id="birthdayGrid">
+                    </div>
+
+                <div class="update-info">
+                    <h3>📊 Datos actualizados automáticamente</h3>
+                    <p>Los cumpleaños se cargan directamente desde Google Sheets de Docuprint.<br>
+                    Última actualización: <span id="lastUpdate">--</span></p>
+                </div>
+            </div>
+
+            <div class="confetti-container" id="confettiContainer"></div>
         </div>
     </div>
-
-    <div class="confetti-container" id="confettiContainer"></div>
 
     <script>
+        // El código JavaScript no necesita cambios.
+        // ... (Tu script original va aquí)
         // Configuración
         const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBkO8UfbQoz90Z0os4Wult6mAz_GEzhEHpZuuyb7_-72fw0kowQ8-JYhCC0AzjyOtvlZGtgLj3Dvl/pub?gid=1759459475&single=true&output=csv';
         
@@ -543,7 +567,7 @@
                     day = parseInt(parts[0], 10);
                     month = parseInt(parts[1], 10);
                     year = new Date().getFullYear(); 
-                }
+                 }
             }
             
             if (!isNaN(day) && !isNaN(month) && day >= 1 && day <= 31 && month >= 1 && month <= 12) {
