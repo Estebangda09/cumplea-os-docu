@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cumpleaños del Mes - Docuprint</title>
     <style>
@@ -534,389 +534,340 @@
     <div class="confetti-container" id="confettiContainer"></div>
 
     <script>
-        // Configuración
-        const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBkO8UfbQoz90Z0os4Wult6mAz_GEzhEHpZuuyb7_-72fw0kowQ8-JYhCC0AzjyOtvlZGtgLj3Dvl/pub?gid=1759459475&single=true&output=csv';
-        
-        // Usamos el proxy para evitar problemas de CORS y compatibilidad
-        const PROXY_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL);
+    // Configuración
+    const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuBkO8UfbQoz90Z0os4Wult6mAz_GEzhEHpZuuyb7_-72fw0kowQ8-JYhCC0AzjyOtvlZGtgLj3Dvl/pub?gid=1759459475&single=true&output=csv';
+    const PROXY_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(BASE_URL);
+    const SHEET_URL = PROXY_URL;
+    const months = [
+        'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+        'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+    ];
+    let birthdayData = [];
+    let confettiInterval;
+    let updateInterval;
 
-        const SHEET_URL = PROXY_URL;
-        
-        const months = [
-            'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-        ];
+    // Función para obtener mes actual
+    function getCurrentMonth() {
+        const now = new Date();
+        return {
+            index: now.getMonth(),
+            name: months[now.getMonth()],
+            number: now.getMonth() + 1
+        };
+    }
 
-        let birthdayData = [];
-        let confettiInterval;
-        let updateInterval;
+    // Función para obtener fecha actual
+    function getCurrentDate() {
+        const now = new Date();
+        return {
+            day: now.getDate(),
+            month: now.getMonth() + 1,
+            year: now.getFullYear()
+        };
+    }
 
-        // Función para obtener mes actual
-        function getCurrentMonth() {
-            const now = new Date();
-            return {
-                index: now.getMonth(),
-                name: months[now.getMonth()],
-                number: now.getMonth() + 1
+    // Función para parsear fecha DD/MM/YYYY
+    function parseDate(dateString) {
+        if (!dateString) return null;
+        const cleanDate = dateString.trim();
+        let day, month, year;
+        if (cleanDate.includes('/')) {
+            const parts = cleanDate.split('/');
+            if (parts.length >= 2) {
+                day = parseInt(parts[0], 10);
+                month = parseInt(parts[1], 10);
+                year = parts.length === 3 ? parseInt(parts[2], 10) : new Date().getFullYear();
+            }
+        } else if (cleanDate.includes('-')) {
+            const parts = cleanDate.split('-');
+            if (parts.length >= 2) {
+                day = parseInt(parts[0], 10);
+                month = parseInt(parts[1], 10);
+                year = new Date().getFullYear();
+            }
+        }
+        if (!isNaN(day) && !isNaN(month) && day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+            return { day, month, year };
+        }
+        return null;
+    }
+
+    // Función para crear confetti
+    function createConfetti() {
+        const container = document.getElementById('confettiContainer');
+        if (!container) return;
+        const colors = ['#C82330', '#6D6E71', '#ffe66d', '#95e1d3', '#ffa8a8', '#ff9ff3'];
+        for (let i = 0; i < 15; i++) {
+            setTimeout(function() {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                container.appendChild(confetti);
+                setTimeout(function() { confetti.remove(); }, 4000);
+            }, i * 50);
+        }
+    }
+
+    // --- GUARDAR en localStorage ---
+    function saveToLocalStorage(data) {
+        try {
+            const dataToSave = {
+                 data,
+                timestamp: new Date().getTime()
             };
+            localStorage.setItem('birthdayData', JSON.stringify(dataToSave));
+            console.log('💾 Datos guardados en localStorage');
+        } catch (e) {
+            console.warn('⚠️ No se pudo guardar en localStorage:', e);
         }
+    }
 
-        // Función para obtener fecha actual
-        function getCurrentDate() {
-            const now = new Date();
-            return {
-                day: now.getDate(),
-                month: now.getMonth() + 1,
-                year: now.getFullYear()
-            };
-        }
-
-        // Función para parsear fecha DD/MM/YYYY
-        function parseDate(dateString) {
-            if (!dateString) return null;
-            
-            const cleanDate = dateString.trim();
-            let day, month, year;
-            
-            if (cleanDate.includes('/')) {
-                const parts = cleanDate.split('/');
-                if (parts.length >= 2) { // Acepta DD/MM o DD/MM/YYYY
-                    day = parseInt(parts[0], 10);
-                    month = parseInt(parts[1], 10);
-                    year = parts.length === 3 ? parseInt(parts[2], 10) : new Date().getFullYear();
-                }
-            } else if (cleanDate.includes('-')) {
-                const parts = cleanDate.split('-');
-                 if (parts.length >= 2) {
-                    day = parseInt(parts[0], 10);
-                    month = parseInt(parts[1], 10);
-                    year = new Date().getFullYear(); 
-                }
+    // --- CARGAR desde localStorage ---
+    function loadFromLocalStorage() {
+        try {
+            const saved = localStorage.getItem('birthdayData');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                console.log('📂 Datos cargados desde localStorage (última actualización:', new Date(parsed.timestamp).toLocaleString(), ')');
+                return parsed.data;
             }
-            
-            if (!isNaN(day) && !isNaN(month) && day >= 1 && day <= 31 && month >= 1 && month <= 12) {
-                return { day, month, year };
-            }
-            
-            return null;
+        } catch (e) {
+            console.warn('⚠️ Error al leer localStorage:', e);
         }
+        return null;
+    }
 
-        // Función para crear confetti
-        function createConfetti() {
-            const container = document.getElementById('confettiContainer');
-            if (!container) return;
-            const colors = ['#C82330', '#6D6E71', '#ffe66d', '#95e1d3', '#ffa8a8', '#ff9ff3'];
-            
-            for (let i = 0; i < 15; i++) {
-                setTimeout(function() {
-                    const confetti = document.createElement('div');
-                    confetti.className = 'confetti';
-                    confetti.style.left = Math.random() * 100 + '%';
-                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-                    confetti.style.animationDelay = Math.random() * 2 + 's';
-                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
-                    container.appendChild(confetti);
-                    
-                    setTimeout(function() { confetti.remove(); }, 4000);
-                }, i * 50);
-            }
-        }
-
-        // Función para cargar datos desde Google Sheets usando XMLHttpRequest
-        function loadBirthdayData() {
-            return new Promise(function(resolve, reject) {
-                console.log('🔄 Cargando datos en segundo plano...');
-                const xhr = new XMLHttpRequest();
-                
-                xhr.open('GET', SHEET_URL, true);
-
-                xhr.onload = function() {
-                    if (xhr.status >= 200 && xhr.status < 400) {
-                        try {
-                            const csvText = xhr.responseText;
-                            console.log('✅ Datos CSV recibidos correctamente');
-                            
-                            // Parsear CSV
-                            const lines = csvText.split('\n');
-                            const data = [];
-                            
-                            // Saltar la primera línea (encabezados)
-                            for (let i = 1; i < lines.length; i++) {
-                                const line = lines[i].trim();
-                                if (line) {
-                                    const columns = line.split(',');
-                                    if (columns.length >= 2) {
-                                        const name = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
-                                        const birthDate = columns[1] ? columns[1].replace(/"/g, '').trim() : '';
-                                        
-                                        if (name && birthDate) {
-                                            const parsedDate = parseDate(birthDate);
-                                            if (parsedDate) {
-                                                data.push({
-                                                    name: name,
-                                                    day: parsedDate.day,
-                                                    month: parsedDate.month,
-                                                    originalDate: birthDate
-                                                });
-                                            }
+    // --- CARGAR desde Google Sheets ---
+    function loadBirthdayData() {
+        return new Promise(function(resolve, reject) {
+            console.log('🔄 Cargando datos desde Google Sheets...');
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', SHEET_URL, true);
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 400) {
+                    try {
+                        const csvText = xhr.responseText;
+                        const lines = csvText.split('\n');
+                        const data = [];
+                        for (let i = 1; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (line) {
+                                const columns = line.split(',');
+                                if (columns.length >= 2) {
+                                    const name = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
+                                    const birthDate = columns[1] ? columns[1].replace(/"/g, '').trim() : '';
+                                    if (name && birthDate) {
+                                        const parsedDate = parseDate(birthDate);
+                                        if (parsedDate) {
+                                            data.push({
+                                                name: name,
+                                                day: parsedDate.day,
+                                                month: parsedDate.month,
+                                                originalDate: birthDate
+                                            });
                                         }
                                     }
                                 }
                             }
-                            
-                            console.log('📊 Datos procesados:', data.length, 'cumpleaños encontrados');
-                            resolve(data);
-
-                        } catch (e) {
-                            console.error('❌ Error parseando los datos CSV:', e);
-                            reject(e);
                         }
-                    } else {
-                        console.error('❌ Error del servidor. Estado:', xhr.status);
-                        reject(new Error('Error del servidor: ' + xhr.statusText));
+                        console.log('✅ Datos cargados desde Google Sheets:', data.length);
+                        saveToLocalStorage(data); // Guardar para offline
+                        resolve(data);
+                    } catch (e) {
+                        console.error('❌ Error parseando CSV:', e);
+                        reject(e);
                     }
-                };
-
-                xhr.onerror = function() {
-                    console.error('❌ Error de red con XMLHttpRequest.');
-                    reject(new Error('Error de red'));
-                };
-
-                xhr.send();
-            });
-        }
-
-        // Función para determinar el layout basado en la cantidad de tarjetas
-        function setGridLayout(count) {
-            const grid = document.getElementById('birthdayGrid');
-            if (!grid) return;
-
-            // Limpiar clases previas
-            grid.classList.remove('few-cards', 'many-cards');
-
-            // Determinar layout basado en cantidad
-            if (count >= 13) {
-                grid.classList.add('many-cards');
-                console.log('📱 Layout: 4 columnas (muchas tarjetas)');
-            } else {
-                grid.classList.add('few-cards');
-                console.log('📱 Layout: 3 columnas (pocas tarjetas)');
-            }
-        }
-
-        // Función para renderizar cumpleaños
-        function renderBirthdays() {
-            const currentMonth = getCurrentMonth();
-            const currentDate = getCurrentDate();
-            const grid = document.getElementById('birthdayGrid');
-            const loading = document.getElementById('loading');
-            
-            if (!grid || !loading) return;
-
-            document.getElementById('currentMonth').textContent = currentMonth.name;
-            
-            const monthBirthdays = birthdayData.filter(function(person) {
-                return person.month === currentMonth.number;
-            });
-            
-            monthBirthdays.sort(function(a, b) { return a.day - b.day; });
-            
-            console.log('🎂 Cumpleaños de ' + currentMonth.name + ':', monthBirthdays.length);
-            
-            if (monthBirthdays.length === 0) {
-                grid.innerHTML = '<div style="text-align: center; color: #C82330; font-size: 1.5rem; font-weight: 600;">No hay cumpleaños este mes 🎂</div>';
-                grid.classList.remove('few-cards', 'many-cards');
-                loading.style.display = 'none';
-                return;
-            }
-            
-            // Configurar layout antes de renderizar
-            setGridLayout(monthBirthdays.length);
-            
-            grid.innerHTML = '';
-            
-            let hasToday = false;
-            
-            monthBirthdays.forEach(function(person) {
-                const card = document.createElement('div');
-                card.className = 'birthday-card';
-                
-                const isToday = person.day === currentDate.day && person.month === currentDate.month;
-                if (isToday) {
-                    card.classList.add('today');
-                    hasToday = true;
-                }
-                
-                card.innerHTML = `
-                    <div class="date">${String(person.day).padStart(2, '0')}-${String(person.month).padStart(2, '0')}</div>
-                    <div class="name">${person.name}</div>
-                `;
-                
-                grid.appendChild(card);
-            });
-            
-            loading.style.display = 'none';
-            
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-AR');
-            
-            if (hasToday) {
-                setTimeout(createConfetti, 500);
-                if (confettiInterval) clearInterval(confettiInterval);
-                confettiInterval = setInterval(createConfetti, 10000);
-            }
-        }
-
-        // Función para comparar si los datos son iguales
-        function isEqualData(newData, currentData) {
-            if (newData.length !== currentData.length) return false;
-            
-            return newData.every(function(item, i) {
-                return currentData[i] && 
-                       item.name === currentData[i].name && 
-                       item.day === currentData[i].day && 
-                       item.month === currentData[i].month;
-            });
-        }
-
-        // Función para obtener datos actuales del DOM
-        function getCurrentDOMData() {
-            const currentCards = document.querySelectorAll('.birthday-card');
-            const currentMonth = getCurrentMonth();
-            
-            return Array.from(currentCards).map(function(card) {
-                const nameEl = card.querySelector('.name');
-                const dateEl = card.querySelector('.date');
-                
-                if (!nameEl || !dateEl) return null;
-                
-                const name = nameEl.textContent.trim();
-                const dateText = dateEl.textContent.trim();
-                const [day, month] = dateText.split('-').map(n => parseInt(n, 10));
-                
-                return { name, day, month };
-            }).filter(Boolean);
-        }
-
-        // Función para actualizar datos en segundo plano
-        async function updateDataInBackground() {
-            try {
-                console.log('🔄 Verificando actualizaciones en segundo plano...');
-                const newData = await loadBirthdayData();
-                const currentMonth = getCurrentMonth();
-                
-                // Filtrar datos del mes actual
-                const newMonthData = newData.filter(function(person) {
-                    return person.month === currentMonth.number;
-                }).sort(function(a, b) { return a.day - b.day; });
-                
-                const currentDOMData = getCurrentDOMData();
-                
-                // Comparar datos
-                if (!isEqualData(newMonthData, currentDOMData)) {
-                    console.log('🔄 Cambios detectados, actualizando interfaz...');
-                    birthdayData = newData;
-                    renderBirthdays();
                 } else {
-                    console.log('✅ No hay cambios en los datos');
-                    // Solo actualizar timestamp
-                    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-AR');
+                    console.error('❌ Error de red o servidor:', xhr.status);
+                    reject(new Error('Error de red'));
                 }
-            } catch (error) {
-                console.error('❌ Error en actualización automática:', error);
-            }
-        }
-
-        // Función principal de inicialización
-        async function initialize() {
-            try {
-                console.log('🚀 Inicializando aplicación...');
-                
-                // Carga inicial
-                const initialData = await loadBirthdayData();
-                birthdayData = initialData;
-                renderBirthdays();
-                
-                // Configurar actualizaciones automáticas cada 30 segundos
-                if (updateInterval) clearInterval(updateInterval);
-                updateInterval = setInterval(updateDataInBackground, 30000);
-                
-                console.log('✅ Aplicación inicializada correctamente');
-                
-            } catch (error) {
-                console.error('❌ Error inicializando:', error);
-                
-                const loadingElement = document.getElementById('loading');
-                if (loadingElement) {
-                    loadingElement.innerHTML = `
-                        <div class="error">
-                            ⚠️ Error cargando datos de cumpleaños<br>
-                            <small>No se pudo conectar con Google Sheets. Mostrando datos de respaldo.</small>
-                        </div>
-                    `;
-                }
-                loadBackupData();
-            }
-        }
-
-        // Datos de respaldo en caso de fallo
-        function loadBackupData() {
-            console.log('📦 Cargando datos de respaldo...');
-            
-            const currentMonth = getCurrentMonth().number;
-            
-            // Datos de respaldo para diferentes meses (ejemplo con agosto)
-            const backupData = [
-                { name: 'Karen Rojas', day: 1, month: 8 },
-                { name: 'Federico Menoyo', day: 4, month: 8 },
-                { name: 'Euge Lozano', day: 8, month: 8 },
-                { name: 'Jorge Leal', day: 13, month: 8 },
-                { name: 'Nelson Solorzano', day: 17, month: 8 },
-                { name: 'Analia Antonio', day: 20, month: 8 },
-                { name: 'Juan Roman', day: 26, month: 8 },
-                { name: 'Carolina Espinola', day: 27, month: 8 }
-            ];
-            
-            birthdayData = backupData;
-            renderBirthdays();
-        }
-
-        // Función para limpiar intervalos
-        function cleanup() {
-            if (confettiInterval) {
-                clearInterval(confettiInterval);
-                confettiInterval = null;
-            }
-            if (updateInterval) {
-                clearInterval(updateInterval);
-                updateInterval = null;
-            }
-        }
-
-        // Inicializar cuando se carga la página
-        document.addEventListener('DOMContentLoaded', initialize);
-        
-        // Limpiar intervalos al cerrar
-        window.addEventListener('beforeunload', cleanup);
-        
-        // Limpiar intervalos si la página pierde el foco por mucho tiempo
-        let focusTimeout;
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // Página oculta, detener actualizaciones después de 5 minutos
-                focusTimeout = setTimeout(function() {
-                    console.log('⏸️ Pausando actualizaciones (página inactiva)');
-                    if (updateInterval) clearInterval(updateInterval);
-                }, 300000); // 5 minutos
-            } else {
-                // Página visible, reanudar actualizaciones
-                if (focusTimeout) clearTimeout(focusTimeout);
-                if (!updateInterval) {
-                    console.log('▶️ Reanudando actualizaciones');
-                    updateInterval = setInterval(updateDataInBackground, 30000);
-                    updateDataInBackground(); // Actualizar inmediatamente
-                }
-            }
+            };
+            xhr.onerror = function() {
+                console.error('❌ Error de red al conectar con Google Sheets');
+                reject(new Error('Error de red'));
+            };
+            xhr.send();
         });
-    </script>
+    }
+
+    // --- DETERMINAR LAYOUT (3 o 4 columnas) ---
+    function setGridLayout(count) {
+        const grid = document.getElementById('birthdayGrid');
+        if (!grid) return;
+        grid.classList.remove('few-cards', 'many-cards');
+        if (count >= 13) {
+            grid.classList.add('many-cards');
+        } else {
+            grid.classList.add('few-cards');
+        }
+    }
+
+    // --- RENDERIZAR CUMPLEAÑOS ---
+    function renderBirthdays() {
+        const currentMonth = getCurrentMonth();
+        const currentDate = getCurrentDate();
+        const grid = document.getElementById('birthdayGrid');
+        const loading = document.getElementById('loading');
+        if (!grid || !loading) return;
+
+        document.getElementById('currentMonth').textContent = currentMonth.name;
+
+        const monthBirthdays = birthdayData.filter(p => p.month === currentMonth.number);
+        monthBirthdays.sort((a, b) => a.day - b.day);
+
+        if (monthBirthdays.length === 0) {
+            grid.innerHTML = '<div style="text-align: center; color: #C82330; font-size: 1.5rem; font-weight: 600;">No hay cumpleaños este mes 🎂</div>';
+            grid.classList.remove('few-cards', 'many-cards');
+            loading.style.display = 'none';
+            return;
+        }
+
+        setGridLayout(monthBirthdays.length);
+        grid.innerHTML = '';
+
+        let hasToday = false;
+        monthBirthdays.forEach(person => {
+            const card = document.createElement('div');
+            card.className = 'birthday-card';
+            const isToday = person.day === currentDate.day && person.month === currentDate.month;
+            if (isToday) {
+                card.classList.add('today');
+                hasToday = true;
+            }
+            card.innerHTML = `
+                <div class="date">${String(person.day).padStart(2, '0')}-${String(person.month).padStart(2, '0')}</div>
+                <div class="name">${person.name}</div>
+            `;
+            grid.appendChild(card);
+        });
+
+        loading.style.display = 'none';
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-AR');
+
+        if (hasToday) {
+            setTimeout(createConfetti, 500);
+            if (confettiInterval) clearInterval(confettiInterval);
+            confettiInterval = setInterval(createConfetti, 10000);
+        }
+    }
+
+    // --- COMPARAR DATOS ---
+    function isEqualData(newData, currentData) {
+        if (newData.length !== currentData.length) return false;
+        return newData.every((item, i) =>
+            item.name === currentData[i].name &&
+            item.day === currentData[i].day &&
+            item.month === currentData[i].month
+        );
+    }
+
+    // --- OBTENER DATOS ACTUALES DEL DOM ---
+    function getCurrentDOMData() {
+        const cards = document.querySelectorAll('.birthday-card');
+        return Array.from(cards).map(card => {
+            const nameEl = card.querySelector('.name');
+            const dateEl = card.querySelector('.date');
+            if (!nameEl || !dateEl) return null;
+            const [day, month] = dateEl.textContent.split('-').map(n => parseInt(n, 10));
+            return { name: nameEl.textContent.trim(), day, month };
+        }).filter(Boolean);
+    }
+
+    // --- ACTUALIZAR EN SEGUNDO PLANO ---
+    async function updateDataInBackground() {
+        try {
+            console.log('🔍 Verificando actualización en segundo plano...');
+            const newData = await loadBirthdayData();
+            const currentMonth = getCurrentMonth();
+            const newMonthData = newData.filter(p => p.month === currentMonth.number).sort((a, b) => a.day - b.day);
+            const currentDOMData = getCurrentDOMData();
+
+            if (!isEqualData(newMonthData, currentDOMData)) {
+                console.log('🔄 Cambios detectados. Actualizando UI...');
+                birthdayData = newData;
+                renderBirthdays();
+            } else {
+                console.log('✅ Sin cambios. Manteniendo UI.');
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-AR');
+            }
+        } catch (error) {
+            console.warn('⚠️ Sin conexión. Usando datos locales.');
+            // No hacemos nada: ya estamos usando los datos locales
+        }
+    }
+
+    // --- INICIALIZACIÓN ---
+    async function initialize() {
+        const loading = document.getElementById('loading');
+        const currentMonth = getCurrentMonth();
+
+        // 1. Intentar cargar desde localStorage
+        const cachedData = loadFromLocalStorage();
+        if (cachedData) {
+            birthdayData = cachedData;
+            console.log('✅ Usando datos almacenados para mostrar al inicio');
+            renderBirthdays();
+        } else {
+            console.log('ℹ️ No hay datos en caché. Cargando...');
+            loading.textContent = '📦 No hay datos locales. Conectando...';
+        }
+
+        // 2. Intentar cargar desde Google Sheets
+        try {
+            const freshData = await loadBirthdayData();
+            birthdayData = freshData;
+            renderBirthdays();
+        } catch (error) {
+            if (birthdayData.length === 0) {
+                // Ni caché ni conexión: mostrar error
+                loading.innerHTML = `
+                    <div class="error">
+                        ⚠️ Sin conexión y sin datos locales<br>
+                        <small>Verifica tu conexión a internet.</small>
+                    </div>
+                `;
+            } else {
+                // Ya se mostraron datos locales, solo notificar
+                loading.style.display = 'none';
+                document.getElementById('lastUpdate').textContent = 'Offline - Datos locales';
+            }
+        }
+
+        // 3. Configurar actualización cada 30 segundos
+        clearInterval(updateInterval);
+        updateInterval = setInterval(updateDataInBackground, 30000);
+
+        // 4. Actualizar timestamp inicial si ya se renderizó
+        if (birthdayData.length > 0 && !document.getElementById('lastUpdate').textContent.includes('Offline')) {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-AR');
+        }
+    }
+
+    // --- LIMPIEZA ---
+    function cleanup() {
+        if (confettiInterval) clearInterval(confettiInterval);
+        if (updateInterval) clearInterval(updateInterval);
+    }
+
+    window.addEventListener('beforeunload', cleanup);
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            setTimeout(() => {
+                if (updateInterval) clearInterval(updateInterval);
+            }, 300000); // 5 min
+        } else {
+            if (!updateInterval) {
+                updateInterval = setInterval(updateDataInBackground, 30000);
+                updateDataInBackground();
+            }
+        }
+    });
+
+    // --- INICIAR ---
+    document.addEventListener('DOMContentLoaded', initialize);
+</script>
 </body>
 </html>
