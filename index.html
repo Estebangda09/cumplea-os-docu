@@ -191,9 +191,24 @@
 
         .birthday-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 25px;
             margin-top: 40px;
+            justify-content: center;
+            align-items: start;
+            grid-template-columns: repeat(3, 1fr);
+            max-height: calc(100vh - 400px);
+            overflow: hidden;
+        }
+
+        /* Ajuste dinámico de columnas basado en cantidad de tarjetas */
+        .birthday-grid.many-cards {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .birthday-grid.few-cards {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
         }
 
         .birthday-card {
@@ -206,6 +221,11 @@
             position: relative;
             overflow: hidden;
             transform: translateY(0);
+        }
+
+        /* Ajuste de tamaño de tarjetas para muchas tarjetas */
+        .birthday-grid.many-cards .birthday-card {
+            padding: 20px;
         }
 
         .birthday-card::before {
@@ -290,6 +310,16 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
 
+        /* Ajuste de texto para muchas tarjetas */
+        .birthday-grid.many-cards .date {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .birthday-grid.many-cards .name {
+            font-size: 1.4rem;
+        }
+
         .today .date, .today .name {
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -369,13 +399,30 @@
                 font-size: 2rem;
             }
             
-            .birthday-grid {
+            .birthday-grid,
+            .birthday-grid.many-cards,
+            .birthday-grid.few-cards {
                 grid-template-columns: 1fr;
                 gap: 20px;
             }
             
             .birthday-card {
                 padding: 20px;
+            }
+        }
+
+        /* Optimización para pantallas 16:9 (1920x1080) */
+        @media (min-width: 1920px) and (min-height: 1080px) {
+            .birthday-grid {
+                max-height: calc(100vh - 350px);
+            }
+            
+            .birthday-grid.many-cards {
+                gap: 18px;
+            }
+            
+            .birthday-grid.many-cards .birthday-card {
+                padding: 18px;
             }
         }
     </style>
@@ -502,6 +549,7 @@
 
         let birthdayData = [];
         let confettiInterval;
+        let updateInterval;
 
         // Función para obtener mes actual
         function getCurrentMonth() {
@@ -574,22 +622,19 @@
             }
         }
 
-        // --- FUNCIÓN MODIFICADA ---
         // Función para cargar datos desde Google Sheets usando XMLHttpRequest
         function loadBirthdayData() {
-            // Devolvemos una Promesa para mantener la estructura async/await en initialize()
             return new Promise(function(resolve, reject) {
-                console.log('Cargando datos con XMLHttpRequest...');
+                console.log('🔄 Cargando datos en segundo plano...');
                 const xhr = new XMLHttpRequest();
                 
-                xhr.open('GET', SHEET_URL, true); // true para modo asíncrono
+                xhr.open('GET', SHEET_URL, true);
 
                 xhr.onload = function() {
                     if (xhr.status >= 200 && xhr.status < 400) {
-                        // Éxito en la solicitud
                         try {
                             const csvText = xhr.responseText;
-                            console.log('Datos CSV recibidos:', csvText.substring(0, 200) + '...');
+                            console.log('✅ Datos CSV recibidos correctamente');
                             
                             // Parsear CSV
                             const lines = csvText.split('\n');
@@ -619,30 +664,44 @@
                                 }
                             }
                             
-                            console.log('Datos procesados:', data.length, 'cumpleaños encontrados');
-                            birthdayData = data;
-                            resolve(data); // Resolvemos la promesa con los datos
+                            console.log('📊 Datos procesados:', data.length, 'cumpleaños encontrados');
+                            resolve(data);
 
                         } catch (e) {
-                            console.error('Error parseando los datos CSV:', e);
-                            reject(e); // Rechazamos la promesa si hay error en el parseo
+                            console.error('❌ Error parseando los datos CSV:', e);
+                            reject(e);
                         }
                     } else {
-                        // Error en el servidor
-                        console.error('Error del servidor en la solicitud. Estado:', xhr.status);
+                        console.error('❌ Error del servidor. Estado:', xhr.status);
                         reject(new Error('Error del servidor: ' + xhr.statusText));
                     }
                 };
 
-                // Error de red
                 xhr.onerror = function() {
-                    console.error('Error de red con XMLHttpRequest.');
+                    console.error('❌ Error de red con XMLHttpRequest.');
                     reject(new Error('Error de red'));
                 };
 
-                // Enviar la solicitud
                 xhr.send();
             });
+        }
+
+        // Función para determinar el layout basado en la cantidad de tarjetas
+        function setGridLayout(count) {
+            const grid = document.getElementById('birthdayGrid');
+            if (!grid) return;
+
+            // Limpiar clases previas
+            grid.classList.remove('few-cards', 'many-cards');
+
+            // Determinar layout basado en cantidad
+            if (count >= 13) {
+                grid.classList.add('many-cards');
+                console.log('📱 Layout: 4 columnas (muchas tarjetas)');
+            } else {
+                grid.classList.add('few-cards');
+                console.log('📱 Layout: 3 columnas (pocas tarjetas)');
+            }
         }
 
         // Función para renderizar cumpleaños
@@ -662,13 +721,17 @@
             
             monthBirthdays.sort(function(a, b) { return a.day - b.day; });
             
-            console.log('Cumpleaños de ' + currentMonth.name + ':', monthBirthdays);
+            console.log('🎂 Cumpleaños de ' + currentMonth.name + ':', monthBirthdays.length);
             
             if (monthBirthdays.length === 0) {
                 grid.innerHTML = '<div style="text-align: center; color: #C82330; font-size: 1.5rem; font-weight: 600;">No hay cumpleaños este mes 🎂</div>';
+                grid.classList.remove('few-cards', 'many-cards');
                 loading.style.display = 'none';
                 return;
             }
+            
+            // Configurar layout antes de renderizar
+            setGridLayout(monthBirthdays.length);
             
             grid.innerHTML = '';
             
@@ -703,15 +766,84 @@
             }
         }
 
-        // Función principal de inicialización (se mantiene async/await gracias a las Promesas)
+        // Función para comparar si los datos son iguales
+        function isEqualData(newData, currentData) {
+            if (newData.length !== currentData.length) return false;
+            
+            return newData.every(function(item, i) {
+                return currentData[i] && 
+                       item.name === currentData[i].name && 
+                       item.day === currentData[i].day && 
+                       item.month === currentData[i].month;
+            });
+        }
+
+        // Función para obtener datos actuales del DOM
+        function getCurrentDOMData() {
+            const currentCards = document.querySelectorAll('.birthday-card');
+            const currentMonth = getCurrentMonth();
+            
+            return Array.from(currentCards).map(function(card) {
+                const nameEl = card.querySelector('.name');
+                const dateEl = card.querySelector('.date');
+                
+                if (!nameEl || !dateEl) return null;
+                
+                const name = nameEl.textContent.trim();
+                const dateText = dateEl.textContent.trim();
+                const [day, month] = dateText.split('-').map(n => parseInt(n, 10));
+                
+                return { name, day, month };
+            }).filter(Boolean);
+        }
+
+        // Función para actualizar datos en segundo plano
+        async function updateDataInBackground() {
+            try {
+                console.log('🔄 Verificando actualizaciones en segundo plano...');
+                const newData = await loadBirthdayData();
+                const currentMonth = getCurrentMonth();
+                
+                // Filtrar datos del mes actual
+                const newMonthData = newData.filter(function(person) {
+                    return person.month === currentMonth.number;
+                }).sort(function(a, b) { return a.day - b.day; });
+                
+                const currentDOMData = getCurrentDOMData();
+                
+                // Comparar datos
+                if (!isEqualData(newMonthData, currentDOMData)) {
+                    console.log('🔄 Cambios detectados, actualizando interfaz...');
+                    birthdayData = newData;
+                    renderBirthdays();
+                } else {
+                    console.log('✅ No hay cambios en los datos');
+                    // Solo actualizar timestamp
+                    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-AR');
+                }
+            } catch (error) {
+                console.error('❌ Error en actualización automática:', error);
+            }
+        }
+
+        // Función principal de inicialización
         async function initialize() {
             try {
-                console.log('Inicializando aplicación...');
-                await loadBirthdayData();
+                console.log('🚀 Inicializando aplicación...');
+                
+                // Carga inicial
+                const initialData = await loadBirthdayData();
+                birthdayData = initialData;
                 renderBirthdays();
-                console.log('Aplicación inicializada correctamente');
+                
+                // Configurar actualizaciones automáticas cada 30 segundos
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(updateDataInBackground, 30000);
+                
+                console.log('✅ Aplicación inicializada correctamente');
+                
             } catch (error) {
-                console.error('Error inicializando:', error);
+                console.error('❌ Error inicializando:', error);
                 
                 const loadingElement = document.getElementById('loading');
                 if (loadingElement) {
@@ -728,28 +860,62 @@
 
         // Datos de respaldo en caso de fallo
         function loadBackupData() {
-            console.log('Cargando datos de respaldo...');
+            console.log('📦 Cargando datos de respaldo...');
             
-            birthdayData = [
-                { name: 'Karen Rojas', day: 1, month: 7 },
-                { name: 'Federico Menoyo', day: 4, month: 7 },
-                { name: 'Euge Lozano', day: 8, month: 7 },
-                { name: 'Jorge Leal', day: 13, month: 7 },
-                { name: 'Nelson Solorzano', day: 17, month: 7 },
-                { name: 'Analia Antonio', day: 20, month: 7 },
-                { name: 'Juan Roman', day: 26, month: 7 },
-                { name: 'Carolina Espinola', day: 27, month: 7 }
+            const currentMonth = getCurrentMonth().number;
+            
+            // Datos de respaldo para diferentes meses (ejemplo con agosto)
+            const backupData = [
+                { name: 'Karen Rojas', day: 1, month: 8 },
+                { name: 'Federico Menoyo', day: 4, month: 8 },
+                { name: 'Euge Lozano', day: 8, month: 8 },
+                { name: 'Jorge Leal', day: 13, month: 8 },
+                { name: 'Nelson Solorzano', day: 17, month: 8 },
+                { name: 'Analia Antonio', day: 20, month: 8 },
+                { name: 'Juan Roman', day: 26, month: 8 },
+                { name: 'Carolina Espinola', day: 27, month: 8 }
             ];
             
+            birthdayData = backupData;
             renderBirthdays();
+        }
+
+        // Función para limpiar intervalos
+        function cleanup() {
+            if (confettiInterval) {
+                clearInterval(confettiInterval);
+                confettiInterval = null;
+            }
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
         }
 
         // Inicializar cuando se carga la página
         document.addEventListener('DOMContentLoaded', initialize);
         
         // Limpiar intervalos al cerrar
-        window.addEventListener('beforeunload', function() {
-            if (confettiInterval) clearInterval(confettiInterval);
+        window.addEventListener('beforeunload', cleanup);
+        
+        // Limpiar intervalos si la página pierde el foco por mucho tiempo
+        let focusTimeout;
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Página oculta, detener actualizaciones después de 5 minutos
+                focusTimeout = setTimeout(function() {
+                    console.log('⏸️ Pausando actualizaciones (página inactiva)');
+                    if (updateInterval) clearInterval(updateInterval);
+                }, 300000); // 5 minutos
+            } else {
+                // Página visible, reanudar actualizaciones
+                if (focusTimeout) clearTimeout(focusTimeout);
+                if (!updateInterval) {
+                    console.log('▶️ Reanudando actualizaciones');
+                    updateInterval = setInterval(updateDataInBackground, 30000);
+                    updateDataInBackground(); // Actualizar inmediatamente
+                }
+            }
         });
     </script>
 </body>
