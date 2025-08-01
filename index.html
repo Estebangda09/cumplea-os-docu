@@ -190,14 +190,15 @@
         }
 
         .birthday-grid {
-            display: grid;
-            gap: 25px;
+            flex-wrap: wrap;
+             gap: 25px;
             margin-top: 40px;
             justify-content: center;
             align-items: start;
             grid-template-columns: repeat(3, 1fr);
             max-height: calc(100vh - 400px);
             overflow: visible;
+            display: flex;
         }
 
         /* Ajuste dinámico de columnas basado en cantidad de tarjetas */
@@ -209,6 +210,7 @@
         .birthday-grid.few-cards {
             grid-template-columns: repeat(3, 1fr);
             gap: 25px;
+            flex-wrap: wrap;
         }
 
         .birthday-card {
@@ -221,6 +223,9 @@
             position: relative;
             overflow: hidden;
             transform: translateY(0);
+            flex: 1 1 calc(33.33% - 25px); /* 3 por fila */
+            max-width: 320px;
+            min-width: 280px;
         }
 
         /* Ajuste de tamaño de tarjetas para muchas tarjetas */
@@ -318,6 +323,19 @@
 
         .birthday-grid.many-cards .name {
             font-size: 1.4rem;
+        }
+        /* 3 columnas (por defecto) */
+        .birthday-grid.few-cards {
+        flex-wrap: wrap;
+        }
+        
+        .birthday-grid.few-cards .birthday-card {
+        flex: 1 1 calc(33.33% - 25px);
+        }
+        
+        /* 4 columnas (para muchas tarjetas) */
+        .birthday-grid.many-cards .birthday-card {
+        flex: 1 1 calc(25% - 25px);
         }
 
         .today .date, .today .name {
